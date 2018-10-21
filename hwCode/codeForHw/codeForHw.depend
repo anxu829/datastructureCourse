@@ -1,0 +1,10 @@
+# depslib dependency file v1.0
+1540092022 source:c:\users\an\documents\study\datastructurecourse\hwcode\codeforhw\main.cpp
+	<iostream>
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<ctype.h>
+	<limits.h>
+	<math.h>
+
