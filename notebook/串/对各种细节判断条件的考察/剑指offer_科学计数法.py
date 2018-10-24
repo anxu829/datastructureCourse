@@ -10,6 +10,7 @@
 # loc!=len(s) and s[loc] >= '0' and s[loc] <= '9'   , loc != len(s) 要放在前面
 # s[loc] 写成了 loc
 # 最前面的正负号只能有一个
+
 '''
 class Solution:
     # s字符串
