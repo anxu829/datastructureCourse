@@ -7,22 +7,27 @@
 # 错误：
 ## end 初始值是 -1 而不是 array[-1] , 需要时刻记住自己是在访问数组的值还是访问下标
 ## 在算法题中，避免使用 -1 这种索引，会导致 如 start < end 这种判断条件不能使用
-## 下面介绍牛客网的问题的解法
+## 注意，在剑指offer当中，是不要求保证顺序不变的
 '''
 
 
-class Solution:    
+class Solution:
     def reOrderArray(self, array):
-        pass 
-    def reOrderArray1(self, array):
-        # write code here
-        odd,even=[],[]
-        for i in array:
-            odd.append(i) if i%2==1 else even.append(i)
-        return odd+even
-    def reOrderArray2(self, array):
-        # 都是简单的问题
-        return sorted(array,key=lambda c:c%2,reverse=True)
+        # 首先设立两个游标
+        start = 0
+        end = len(array) - 1
+        # 考虑特殊情形：
+        if len(array) < 1:
+            return True 
+        while(start < end ):
+            # start 寻找偶数
+            while(start < end and array[start] % 2 == 1):
+                start +=1
+            # end 寻找奇数
+            while(start < end and array[end] %2 == 0):
+                end -= 1
+            array[start] ,array[end] = array[end] , array[start]
+    
 if __name__ == '__main__':
     array =[1,2,3,4,5,6,7]
     Solution().reOrderArray(array)
