@@ -24,7 +24,7 @@ from scipy.spatial import distance as dist
 
 
 
-
+    
 def simple_cut( img_data):
     img = cv2.cvtColor(img_data, cv2.COLOR_BGR2GRAY)
     h,w = img.shape
@@ -72,48 +72,45 @@ def getSubimgInfo(i,data):
     return subimg,[xmin,ymin,xmax,ymax]
 
 
+def get_coord(rps,label,option = 1):
+    min_row, min_col, max_row, max_col = rps[label-1].bbox
+    if option == 1:
+        x1,y1 = min_col,min_row
+        x2,y2 = max_col,max_row
+    else:
+        # 右上x1,y1，左下x2,y2
+        x1,y1 = max_col,min_row
+        x2,y2 = min_col,max_row
+        
+    return x1,y1,x2,y2
 
 
+def relative_coord(x1,y1,x2,y2,w,h):
+        # bbox 左上，右下
+        return 'left' if x1/w < (1-x2/w) else 'right'
 
-def getYinlieInfo(subimg,bx,verbose = True,padding = 10):
-    
-    if verbose == True:
-        plt.imshow(subimg)
-        plt.show()
-    # 拿到消除栅线的图
+def rectContains(rect,pt):
+     # bbox 左上，右下
+    logic = rect[0] < pt[0] < rect[0]+rect[2] and rect[1] < pt[1] < rect[1]+rect[3]
+    return logic
+
+def getYinlieInfo(subimg,bx,verbose = True):
     del_img = del_shanxian(subimg)
-    #del_img = subimg
-    
-    # 拿到坐标
-    
-    xmin,ymin,xmax,ymax = bx 
-    
-    # 进行坐标放缩
-    padding = 15
-    #xmin = max(0,xmin - padding)
-    #ymin = max(0,ymin - padding)
-    #xmax = min(subimg.shape[1] , xmax + padding)
-    #ymax = min(subimg.shape[0] , ymax + padding)
-    
-    
+
     # get shanxian
     shanxian = del_img[ymin:ymax,xmin:xmax]
-#     print(shanxian.shape)
+    #     print(shanxian.shape)
 
-    if verbose:
-        plt.imshow(del_img[ymin:ymax,xmin:xmax])
-        plt.show()
-        
     size =int( 0.1* min(shanxian.shape[:2]) )
     w,h = shanxian.shape[:2]
 
     kernel1 = np.diag([1.0]*size) / size
     kernel2 = np.flip(kernel1,1)
     if w < h:
-        
+
         kernel1 = cv2.resize(kernel1,(max(1,int(w * 1.0 *size/ h )),size))
         kernel2 = cv2.resize(kernel2,(max(1,int(w * 1.0 *size/ h )),size))
-        
+
     else:
         kernel1 = cv2.resize(kernel1,(size,max(1,int(w * 1.0 *size/ h ))))
         kernel2 = cv2.resize(kernel2,(size,max(1,int(w * 1.0 *size/ h ))))      
@@ -121,20 +118,13 @@ def getYinlieInfo(subimg,bx,verbose = True,padding = 10):
     kernel1 = kernel1 / kernel1.sum()
     kernel2 = kernel2 / kernel2.sum()
 
-#     print(kernel1.shape,kernel2.shape)
-    
+
     # get 2 blur
     blur1 = cv2.filter2D(shanxian,-1,kernel1)
     blur2 = cv2.filter2D(shanxian,-1,kernel2)
 
-    if verbose == True:
-        sb(1,2,1)
-        sh(blur1)
-        sb(1,2,2)
-        sh(blur2)
-        plt.show()
-    
-    if max( (w * 1.0 / h ) , (h * 1.0 / w )) > 1.75 :
+
+    if max( (w * 1.0 / h ) , (h * 1.0 / w )) > 1.75:
         shanxian_c = shanxian.copy()
         k  = cv2.getStructuringElement(cv2.MORPH_RECT,(3,3))
         #shanxian_c = cv2.morphologyEx(shanxian_c,cv2.MORPH_CLOSE,k)
@@ -144,50 +134,109 @@ def getYinlieInfo(subimg,bx,verbose = True,padding = 10):
         # get 2 binary image
         ret1  = 255 -  cv2.adaptiveThreshold(blur1, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 35, 3)
         ret2  = 255 -  cv2.adaptiveThreshold(blur2, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 35, 3)
+    
+    index_i = 0 
+    labels1=measure.label(ret1,connectivity=2)
+    labels2=measure.label(ret2,connectivity=2)
+    labeldic1 = Counter(labels1.flatten())
+    labeldic2 = Counter(labels2.flatten())
+    maxArea1Dic = sorted(labeldic1.items() , key = lambda x:x[1])
+    maxArea2Dic = sorted(labeldic2.items() , key = lambda x:x[1])
+    rps = measure.regionprops(labels1, cache=False)
+    min_row, min_col, max_row, max_col = rps[maxArea1Dic[-2][0]-1].bbox
+    if maxArea1Dic[-2][1] > maxArea2Dic[-2][1] or labels1[min_row][min_col] != 0 :
+    #if maxArea1Dic[-2][1] > maxArea2Dic[-2][1]:
+        # choose first
+        rps = measure.regionprops(labels1, cache=False)
+        aa = [r.area for r in rps]
+        #tuple 
+        index = [maxArea1Dic[-i][0] for i in range(3,7) if maxArea1Dic[-i][1]/max(aa) >0.3]
+        distance = 100000000
+        max_x1,max_y1,max_x2,max_y2 = get_coord(rps,maxArea1Dic[-2][0])
+        max_rel = relative_coord(max_x1,max_y1,max_x2,max_y2,h,w)
+        if max_rel == 'left':
+            for i in range(len(index)):
+                x1,y1,x2,y2 = get_coord(rps,index[i])
+                dists = dist.euclidean((max_x2,max_y2), (x1,y1))
+                center_x,center_y = (x2+x1)/2,(y1+y2)/2
+                #if dists < distance and x1 >= max_x2 and y1 >= max_y2:
+                if dists < distance and center_x +10 >= max_x2 and center_y +10 >= max_y2:
+                    distance = dists
+                    index_i = index[i]
 
+        elif max_rel == 'right':
+            for i in range(len(index)):
+                x1,y1,x2,y2 = get_coord(rps,index[i])
+                dists = dist.euclidean((max_x1,max_y1), (x2,y2))
+                center_x,center_y = (x2+x1)/2,(y1+y2)/2
+                #if dists < distance and x2 <= max_x1 and y2 <= max_y1:
+                if dists < distance and center_x -10 <= max_x1 and center_y -10 <= max_y1:
+                    distance = dists
+                    index_i = index[i]
+
+        # draw the mask
+        if index_i != 0:
+            labels3 = ((labels1 == index_i)+ (labels1 == maxArea1Dic[-2][0]))
+        else:
+            labels3 = (labels1 == maxArea1Dic[-2][0])
+
+    elif index_i == 0:
+        # choose second
+        rps = measure.regionprops(labels2, cache=False)
+        aa = [r.area for r in rps]
+        #tuple 
+        index = [maxArea2Dic[-i][0] for i in range(3,7) if maxArea2Dic[-i][1]/max(aa) >0.3]
+        distance = 100000000
+        max_x1,max_y1,max_x2,max_y2 = get_coord(rps,maxArea2Dic[-2][0],2)
+        max_rel = relative_coord(max_x1,max_y2,max_x2,max_y1,h,w)
+        if max_rel == 'left':
+            for i in range(len(index)):
+                x1,y1,x2,y2 = get_coord(rps,index[i],2)
+                dists = dist.euclidean((max_x1,max_y1), (x2,y2))
+                center_x,center_y = (x2+x1)/2,(y1+y2)/2
+                #if dists < distance and x2 >= max_x1 and y2 <= max_y1:
+                if dists < distance and center_x +10 > max_x1 and center_y -10 < max_y1:
+                    distance = dists
+                    index_i = index[i]
+
+
+        elif max_rel == 'right':
+            for i in range(len(index)):
+                x1,y1,x2,y2 = get_coord(rps,index[i],2)
+                dists = dist.euclidean((max_x2,max_y2), (x1,y1))
+                center_x,center_y = (x2+x1)/2,(y1+y2)/2
+                #if dists < distance and x1 <= max_x2 and y1 >= max_y2:
+                if dists < distance and center_x -10 <= max_x2 and center_y +10 >= max_y2:
+                    distance = dists
+                    index_i = index[i]
+
+        # draw the mask
+        if index_i != 0:
+            labels3 = ((labels2 == index_i)+ (labels2 == maxArea2Dic[-2][0]))  
+        else:
+            labels3 = (labels2 == maxArea2Dic[-2][0])
+            
+    yinlieMask = np.zeros(shape = subimg.shape[:2])
+    yinlieMask[ymin:ymax,xmin:xmax] = labels3
+    
     if verbose == True:
+        plt.imshow(del_img[ymin:ymax,xmin:xmax])
+        plt.show()
+        sb(1,2,1)
+        sh(blur1)
+        sb(1,2,2)
+        sh(blur2)
+        plt.show()
         sb(1,2,1)
         sh(ret1)
         sb(1,2,2)
         sh(ret2)
         plt.show()
-    
-        
-    
-    labels1=measure.label(ret1,connectivity=2)
-    labeldic1 = Counter(labels1.flatten())
-    maxAreaIdx1 = sorted(labeldic1.items() , key = lambda x:x[1])[-2][0]
-    labels1 = labels1 == maxAreaIdx1
-    
-        
-    
-    labels2=measure.label(ret2,connectivity=2)
-    labeldic2 = Counter(labels2.flatten())
-    maxAreaIdx2 = sorted(labeldic2.items() , key = lambda x:x[1])[-2][0]
-    labels2 = labels2 == maxAreaIdx2
-    
-    
-    if labels1.sum()> labels2.sum():
-        labels3 = labels1
-    else:
-        labels3 = labels2
-    
-    if verbose == True:
-        sb(1,3,1)
-        sh(labels1)
-        sb(1,3,2)
-        sh(labels2)
-        sb(1,3,3)
         sh(labels3)
         plt.show()
-    
-    # 生成隐裂的mask
-    yinlieMask = np.zeros(shape = subimg.shape[:2])
-    yinlieMask[ymin:ymax,xmin:xmax] = labels3
 
-  
+            
     return yinlieMask, shanxian, labels3
-
 
 def getHandianInfo(subimg,yinlieMask,verbose = True):
     # 生成栅线Mask
