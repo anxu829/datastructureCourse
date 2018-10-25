@@ -96,7 +96,9 @@ def rectContains(rect,pt):
 
 def getYinlieInfo(subimg,bx,verbose = True):
     del_img = del_shanxian(subimg)
-
+    # 拿到坐标
+    xmin,ymin,xmax,ymax = bx 
+    
     # get shanxian
     shanxian = del_img[ymin:ymax,xmin:xmax]
     #     print(shanxian.shape)
