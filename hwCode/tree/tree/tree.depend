@@ -1,0 +1,10 @@
+# depslib dependency file v1.0
+1540916046 source:c:\users\an\documents\study\datastructurecourse\hwcode\tree\tree\main.cpp
+	<iostream>
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<ctype.h>
+	<limits.h>
+	<math.h>
+

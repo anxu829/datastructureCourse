@@ -17,7 +17,7 @@ class Solution:
         colE = len(matrix[0]) - 1
         rowS = 0
         colS = 0
-        while(colS <= colE or rowS <= rowE):
+        while(colS <= colE and  rowS <= rowE):
             # 首先总是可以打印第一行的
             for  col in range(colS,colE+1):
                 res.append(matrix[rowS][col])
