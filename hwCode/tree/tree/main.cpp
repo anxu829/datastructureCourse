@@ -1,132 +1,115 @@
-#include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <ctype.h>
-#include <limits.h> /* INT_MAX等 */
-#include <math.h> /* floor(),ceil(),abs() */
-
-#include <string>
-
-
-#define TRUE 1
-#define FALSE 0
-#define OK 1
-#define ERROR 0
-// #define OVERFLOW -2
+#include<iostream>
+#include<string>
+#include<cstdlib>
+#include<queue>
 
 
 using namespace std;
-using  std::string;
 
 
-// def elemtype
-typedef string TElemType ;
-typedef int Status;
-
-// define a struct tree
-// 使用typedef 定义了一个结构体 ， 并指定BiTree 表示指向该结构体对象的指针
-typedef struct BiTNode{
-    TElemType data;
-    struct BiTNode *lchild , *rchild;
-}BiTNode,*BiTree;
+// 定义存放数据的类型
+typedef string       ElemType ;
 
 
-// define method for create
-Status CreateBiTree(BiTree &T){
+// 首先需要定义树的每一个节点
+struct treeNode{
+    // 首先需要有一个存放数据的位置
+    ElemType data;
+    // 存放指向第一个子元素的指针
+    treeNode * first_child ;
+    // 存放指向第一个右兄弟节点的指针
+    treeNode * first_sibling ;
 
-    // 传入的是对指针的引用，所以访问元素是通过 T->data 的方式访问指针指向对象的属性
-    string ch;
-    // 从控制台读取数据
-    // c ++ 的换行输入使用cin 方法
-    getline(cin,ch);
-    //scanf("%c",&ch);
-    // 这里传入&T , 是为了能对指针指向的结构进行修改
-    // 如果是空字符串，表示进入到叶子节点的子节点，即叶子节点的左右节点都应该是空的
+};
 
-    if (ch == "None"){
-            cout << "time to stop !" << endl;
-            T= NULL;
-    }// 将指针T指向空地址
-    else{
-        cout << "input is not N" << endl ;
-        if (!(T = (BiTNode *)malloc(sizeof(BiTNode)))) return ERROR;
-        T->data = ch; // 把ch赋值给data，然后进行前序的赋值操作
-        cout << "T->data is " << T->data <<  endl;
+typedef treeNode* Tree ;
 
-        cout << "start to do lchild " << endl;
-        CreateBiTree(T->lchild);
 
-        cout << "start to do rchild " << endl;
-        CreateBiTree(T->rchild);
+
+int main(){
+    cout << "start to create Tree  !" << endl;
+
+    // 树的创建过程
+    cout << "请输入树的头节点元素 ,若不想建立树请输入 # \n" ;
+    ElemType head_data ;
+    cin >>  head_data;
+
+
+    if (head_data != "#"){
+        // 首先定义头节点
+        cout << "now i input an data ! \n" ;
+        Tree T;
+
+        // 必须要分配存储空间
+        T = new treeNode;
+        T->data = head_data;
+        T->first_sibling = NULL;
+
+        // 建立一个queue
+        queue<Tree> Q;
+        Q.push(T) ;
+
+        while(!Q.empty()){
+            // 拿到首个元素
+            Tree head ;
+            head = Q.front() ;
+            Q.pop() ;
+
+
+
+            cout << "现在Q 是否为空 "<< Q.empty() << "  头节点是 " << head->data <<"输入数据" << endl;
+
+            string input ;
+            cin >> input ;
+            if (input != "#"){
+                // 这里循环处理
+
+                string first_child(1, input[0]);
+                cout << "----> first child is" << first_child << endl;
+
+                // 建立一个子节点
+                Tree subtree;
+                // 必须要分配存储空间
+                subtree =new treeNode;
+                subtree->data = first_child;
+                subtree->first_child = NULL;
+                subtree->first_sibling = NULL;
+
+                head->first_child = subtree;
+                Q.push(subtree) ;
+                cout << "----> now back is " << Q.back()->data << endl;
+
+                // 把余下的子节点接到后面去
+                Tree cur = subtree;
+                for (unsigned int i = 1 ; i < input.size() ; i ++){
+                    Tree nxtsubtree =new treeNode;
+                    nxtsubtree->data = input[i];
+                    nxtsubtree->first_child = NULL;
+                    nxtsubtree->first_sibling = NULL;
+
+                    Q.push(nxtsubtree) ;
+                    cout << "----> now back is " << Q.back()->data << endl;
+
+                    cur->first_sibling = nxtsubtree;
+
+                    cur = nxtsubtree;
+
+                }
+
+
+            }
+            else{
+                cout << head->data << " is leaf node" << endl;
+                head->first_child = NULL;
+            }
+
+        }
+
+
+
+
+
+
     }
-    return OK;
-
-
-}
-
-// 定义打印元素的方法
-Status printTreeNode(TElemType e){
-    // printf 接收的是 char * 类型，即接受的是一个char数组，所以传给方法的应该是一个 char*
-    cout << e ;
-    return OK;
-
-}
-
-// define method for traverse
-void PreOrderTraverse(BiTree T , Status(*printTree)(TElemType ) ){
-    // 这里不传入对树的引用，是因为不需要修改树的值
-    // 当T !=NULL
-    if (T){
-        // 传入，并打印，且返回是否打印成功
-        printTreeNode( (T->data)) ;
-        PreOrderTraverse(T->lchild , printTree) ;
-        PreOrderTraverse(T->rchild , printTree) ;
-    }
-}
-
-
-void InOrderTraverse(BiTree T , Status(*printTree)(TElemType ) ){
-    // 这里不传入对树的引用，是因为不需要修改树的值
-    // 当T !=NULL
-    if (T){
-        // 传入，并打印，且返回是否打印成功
-
-        InOrderTraverse(T->lchild , printTree) ;
-        printTreeNode( (T->data)) ;
-        InOrderTraverse(T->rchild , printTree) ;
-    }
-}
-
-void PostOrderTraverse(BiTree T , Status(*printTree)(TElemType ) ){
-    // 这里不传入对树的引用，是因为不需要修改树的值
-    // 当T !=NULL
-    if (T){
-        // 传入，并打印，且返回是否打印成功
-
-        PostOrderTraverse(T->lchild , printTree) ;
-        PostOrderTraverse(T->rchild , printTree) ;
-        printTreeNode( (T->data)) ;
-    }
-}
-
-
-int main()
-{
-    // 建立了一个指向结构体BiNode的指针;
-    BiTree T;
-
-    cout << "start to insert" << endl;
-
-    // 注意这里一定要传入对于树的指针 而不是 &T;
-    CreateBiTree(T);
-
-    cout << "now tree is build !"  << endl ;
-    // 开始遍历树
-    PreOrderTraverse(T,printTreeNode) ;
-    InOrderTraverse(T,printTreeNode) ;
-    PostOrderTraverse(T,printTreeNode) ;
-
-
-
+    return  0;
 }

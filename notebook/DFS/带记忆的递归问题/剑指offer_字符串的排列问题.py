@@ -15,12 +15,16 @@ class Solution:
             res +=  [start + i for i in ans]
         return res 
     def Permutation(self, ss):
+        if ss == "":
+            return []
+        if len(ss) == 1:
+            return [ss]
         ss_list = list(ss)
         
         ans = self.permute(ss_list)
         ans = Counter(ans).keys()
-        sorted(ans,key = lambda x: x)
-        return ans 
+        ans = sorted(ans)
+        return ans
 
 if __name__ == "__main__":
     res = Solution().Permutation('aab')
