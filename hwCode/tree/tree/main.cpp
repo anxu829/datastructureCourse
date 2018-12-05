@@ -57,7 +57,7 @@ int main(){
 
 
 
-            cout << "现在Q 是否为空 "<< Q.empty() << "  头节点是 " << head->data <<"输入数据" << endl;
+            cout << "现在为节点 ：  " << head->data <<" 输入子节点数据" << endl;
 
             string input ;
             cin >> input ;
